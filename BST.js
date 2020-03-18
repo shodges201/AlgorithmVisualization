@@ -131,11 +131,9 @@ const tree = new BinarySearchTree();
 console.log(tree.root);
 
 const margin = { top: 20, right: 90, bottom: 30, left: 90 },
-    width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom,
+    width = window.innerWidth - margin.left - margin.right,
+    height = window.innerHeight - margin.top - margin.bottom,
     duration = 750;
-let i = 0;
-let root;
 const radius = 20;
 
 
@@ -146,9 +144,9 @@ const svg = d3.select("body").append("svg")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
 const treeLayout = d3.tree().size([height, width]);
-root = function () {
-    if(tree.root){
-    return d3.hierarchy(tree.root, function (node) {
+let root = function () {
+    if (tree.root) {
+        return d3.hierarchy(tree.root, function (node) {
             const children = [];
             if (node.left) {
                 children.push(node.left);
@@ -165,7 +163,7 @@ root = function () {
 
 root.x0 = height / 2;
 root.y0 = 0;
-if(root()){
+if (root()) {
     update(root());
 }
 
@@ -192,16 +190,23 @@ function update(source) {
 
     //normalize height so it doesnt go out of the SVG
     let treeDepth = 0;
-    nodes.forEach(function (d) {
-        if (treeDepth < d.depth) {
-            treeDepth = d.depth;
-        }
-    });
+    if (nodes.length > 1) {
+        nodes.forEach(function (d) {
+            if (treeDepth < d.depth) {
+                treeDepth = d.depth;
+            }
+        });
+    }
 
     nodes.forEach(function (d) {
-        d.y = (height - margin.bottom - radius) * (d.depth / treeDepth);
-        if (d.depth === treeDepth) {
+        if(treeDepth === 0){
+            d.y = 0;
+        }
+        else if (d.depth === treeDepth) {
             d.y = height - margin.bottom - radius;
+        }
+        else{
+            d.y = (height - margin.bottom - radius) * (d.depth / treeDepth);
         }
     })
 
@@ -218,7 +223,7 @@ function update(source) {
         });
 
     console.log(nodesEnter);
-    
+
     nodesEnter
         .append('circle')
         .classed('node', true)
