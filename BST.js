@@ -204,9 +204,15 @@ function update(source) {
         }
         else if (d.depth === treeDepth) {
             d.y = height - margin.bottom - radius;
+            if(d.y > d.depth * 180){
+                d.y = d.depth * 180;
+            }
         }
         else{
             d.y = (height - margin.bottom - radius) * (d.depth / treeDepth);
+            if(d.y > d.depth * 180){
+                d.y = d.depth * 180;
+            }
         }
     })
 
