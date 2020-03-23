@@ -160,9 +160,6 @@ let root = function () {
     return null;
 }
 
-
-root.x0 = height / 2;
-root.y0 = 0;
 if (root()) {
     update(root());
 }
@@ -175,10 +172,14 @@ function update(source) {
         // Because a full redraw is done it is not very performant either
         // Replace this method with a join statement and add animations to upadates instead
     */
-    svg.selectAll('g.nodeContainer').remove();
-    svg.selectAll("line.link").remove();
+    //svg.selectAll('g.nodeContainer').remove();
+    //svg.selectAll("line.link").remove();
 
     // Assigns the x and y position for the nodes
+
+    const x0 = height;
+    const y0 = 0;
+
     var treeData = treeLayout(source);
 
     // Compute the new tree layout.
@@ -186,7 +187,6 @@ function update(source) {
     const links = treeData.links();
 
     console.log(nodes);
-    console.log(links);
 
     //normalize height so it doesnt go out of the SVG
     let treeDepth = 0;
@@ -199,36 +199,39 @@ function update(source) {
     }
 
     nodes.forEach(function (d) {
-        if(treeDepth === 0){
+        if (treeDepth === 0) {
             d.y = 0;
         }
         else if (d.depth === treeDepth) {
             d.y = height - margin.bottom - radius;
-            if(d.y > d.depth * 180){
+            if (d.y > d.depth * 180) {
                 d.y = d.depth * 180;
             }
         }
-        else{
+        else {
             d.y = (height - margin.bottom - radius) * (d.depth / treeDepth);
-            if(d.y > d.depth * 180){
+            if (d.y > d.depth * 180) {
                 d.y = d.depth * 180;
             }
         }
     })
 
+    const node = svg.selectAll('g.nodeContainer')
+        .data(nodes);
+
+    // Links Enter
+    const lines = svg.selectAll('line.link')
+        .data(links);
 
     // Nodes
-    const nodesEnter = svg.selectAll('g.nodeContainer')
-        .data(nodes)
+    const nodesEnter = node
         .enter()
         .append("g")
         .classed("nodeContainer", true)
-        // Position the g element like the circle element used to be.
+        // Position the g element that will contain the circles/nodes
         .attr("transform", function (d, i) {
-            return "translate(" + d.x + "," + d.y + ")";
+            return "translate(" + d.x + "," + y0 + ")";
         });
-
-    console.log(nodesEnter);
 
     nodesEnter
         .append('circle')
@@ -240,19 +243,43 @@ function update(source) {
         .attr("dy", ".35em")
         .attr("text-anchor", "middle")
         .text(function (d) {
+            console.log("entering node");
+            console.log(d);
             return d.value;
         })
 
+    // Update Nodes
+    const nodesUpdate = nodesEnter.merge(node);
 
-    // Links
-    const linesEnter = svg.selectAll('line.link')
-        .data(links)
-        .enter();
+    // Transition to the proper position for the node
+    nodesUpdate.transition()
+        .duration(duration)
+        .attr("transform", function (d) {
+            return "translate(" + d.x + "," + d.y + ")";
+        });
+    
+    nodesUpdate.select("text")
+    .text(function(d){
+        console.log("updating node");
+        console.log(d);
+        return d.value;
+    })
 
-    linesEnter.append('line')
+
+    linesEnter = lines.enter()
+        .append('line')
         .classed('link', true)
         .attr('x1', function (d) { return d.source.x; })
-        .attr('y1', function (d) { return d.source.y + radius; })
+        .attr('y1', function (d) { return 0; })
         .attr('x2', function (d) { return d.target.x; })
-        .attr('y2', function (d) { return d.target.y - radius; });
+        .attr('y2', function (d) { return d.target.y - d.source.y; });
+
+    linesUpdate = linesEnter.merge(lines);
+
+    linesUpdate.transition()
+    .duration(duration)
+    .attr('x1', function (d) { return d.source.x; })
+    .attr('y1', function (d) { return d.source.y + radius; })
+    .attr('x2', function (d) { return d.target.x; })
+    .attr('y2', function (d) { return d.target.y - radius; });
 }
