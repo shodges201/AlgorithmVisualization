@@ -161,125 +161,205 @@ let root = function () {
 }
 
 if (root()) {
-    update(root());
+    treeUI.update(root());
 }
 
-function update(source) {
+const treeUI = {
 
-    /*
-        // This is the incorrect and dirty way of removing nodes from the tree
-        // This does not support animations/transtitions because the entire tree is redrawn every time a new node is added
-        // Because a full redraw is done it is not very performant either
-        // Replace this method with a join statement and add animations to upadates instead
-    */
-    //svg.selectAll('g.nodeContainer').remove();
-    //svg.selectAll("line.link").remove();
-
-    // Assigns the x and y position for the nodes
-
-    const x0 = height;
-    const y0 = 0;
-
-    var treeData = treeLayout(source);
-
-    // Compute the new tree layout.
-    const nodes = treeData.descendants();
-    const links = treeData.links();
-
-    console.log(nodes);
-
-    //normalize height so it doesnt go out of the SVG
-    let treeDepth = 0;
-    if (nodes.length > 1) {
-        nodes.forEach(function (d) {
-            if (treeDepth < d.depth) {
-                treeDepth = d.depth;
-            }
-        });
-    }
-
-    nodes.forEach(function (d) {
-        if (treeDepth === 0) {
-            d.y = 0;
+    search: (value, root) => {
+        const colorNodeWrapper = (index, color, wait) => {
+            console.log(circles);
+            setTimeout(function () {
+                circles.style("fill", function (d, i) {
+                    if (index === i) {
+                        console.log("matching node: ");
+                        console.log(d);
+                        return color;
+                    }
+                    else {
+                        return "#fff";
+                    }
+                })
+            }, wait);
         }
-        else if (d.depth === treeDepth) {
-            d.y = height - margin.bottom - radius;
-            if (d.y > d.depth * 180) {
-                d.y = d.depth * 180;
+
+        const stepSpeed = 1000;
+
+        var treeData = treeLayout(root);
+
+        // Compute the new tree layout.
+        const nodes = treeData.descendants();
+        const circles = svg.selectAll("circle");
+        //console.log(circles);
+
+        nodes.forEach(function(d, i){
+            d.i = i;
+        });
+
+        console.log(nodes);
+
+        let currentNode = nodes[0];
+        let wait = 0;
+        while (currentNode && currentNode.value !== value) {
+            console.log("currentNode");
+            console.log(currentNode);
+            //console.log(currentNode.children);
+            colorNodeWrapper(currentNode.i, "yellow", wait);
+            wait += stepSpeed;
+
+            let parentNode = currentNode;
+            if (value > currentNode.value) {
+                if (currentNode.children && currentNode.children.length > 1) {
+                    currentNode = currentNode.children[1];
+                }
+                else if (currentNode.children) {
+                    currentNode = currentNode.children[0]
+                }
+                else {
+                    break;
+                }
+
+                if (currentNode.value < parentNode.value) {
+                    currentNode = parentNode;
+                    break;
+                }
             }
+            else {
+                if (currentNode.children) {
+                    currentNode = currentNode.children[0];
+                }
+                else {
+                    break;
+                }
+                if (currentNode.value > parentNode.value) {
+                    currentNode = parentNode;
+                    break;
+                }
+
+            }
+        }
+        if (!currentNode || currentNode.value !== value) {
+            console.log("node not found: ");
+            colorNodeWrapper(currentNode.i, "red", wait);
         }
         else {
-            d.y = (height - margin.bottom - radius) * (d.depth / treeDepth);
-            if (d.y > d.depth * 180) {
-                d.y = d.depth * 180;
-            }
+            console.log("found node at index: ");
+            colorNodeWrapper(currentNode.i, "green", wait);
         }
-    })
+        //colorNodeWrapper(currentNode, "#fff", wait+stepSpeed);
+        return currentNode;
+    },
 
-    const node = svg.selectAll('g.nodeContainer')
-        .data(nodes);
+    update: (source) => {
+        // Assigns the x and y position for the nodes
 
-    // Links Enter
-    const lines = svg.selectAll('line.link')
-        .data(links);
+        const x0 = height;
+        const y0 = 0;
 
-    // Nodes
-    const nodesEnter = node
-        .enter()
-        .append("g")
-        .classed("nodeContainer", true)
-        // Position the g element that will contain the circles/nodes
-        .attr("transform", function (d, i) {
-            return "translate(" + d.x + "," + y0 + ")";
-        });
+        var treeData = treeLayout(source);
 
-    nodesEnter
-        .append('circle')
-        .classed('node', true)
-        .attr('r', radius);
+        // Compute the new tree layout.
+        const nodes = treeData.descendants();
+        const links = treeData.links();
 
-    nodesEnter.append('text')
-        .attr("x", 0)
-        .attr("dy", ".35em")
-        .attr("text-anchor", "middle")
-        .text(function (d) {
-            console.log("entering node");
-            console.log(d);
-            return d.value;
+        console.log(nodes);
+
+        //normalize height so it doesnt go out of the SVG
+        let treeDepth = 0;
+        if (nodes.length > 1) {
+            nodes.forEach(function (d, i) {
+                if (treeDepth < d.depth) {
+                    treeDepth = d.depth;
+                }
+                console.log(i);
+                d.i = i;
+            });
+        }
+
+        nodes.forEach(function (d) {
+            if (treeDepth === 0) {
+                d.y = 0;
+            }
+            else if (d.depth === treeDepth) {
+                d.y = height - margin.bottom - radius;
+                if (d.y > d.depth * 180) {
+                    d.y = d.depth * 180;
+                }
+            }
+            else {
+                d.y = (height - margin.bottom - radius) * (d.depth / treeDepth);
+                if (d.y > d.depth * 180) {
+                    d.y = d.depth * 180;
+                }
+            }
         })
 
-    // Update Nodes
-    const nodesUpdate = nodesEnter.merge(node);
+        console.log(nodes);
 
-    // Transition to the proper position for the node
-    nodesUpdate.transition()
-        .duration(duration)
-        .attr("transform", function (d) {
-            return "translate(" + d.x + "," + d.y + ")";
-        });
-    
-    nodesUpdate.select("text")
-    .text(function(d){
-        console.log("updating node");
-        console.log(d);
-        return d.value;
-    })
+        const node = svg.selectAll('g.nodeContainer')
+            .data(nodes);
+
+        console.log("node: ");
+        console.log(node);
+
+        // Links Enter
+        const lines = svg.selectAll('line.link')
+            .data(links);
+
+        // Nodes
+        const nodesEnter = node
+            .enter()
+            .append("g")
+            .classed("nodeContainer", true)
+            // Position the g element that will contain the circles/nodes
+            .attr("transform", function (d, i) {
+                return "translate(" + d.x + "," + y0 + ")";
+            });
+
+        nodesEnter
+            .append('circle')
+            .classed('node', true)
+            .attr('r', radius);
+
+        nodesEnter.append('text')
+            .attr("x", 0)
+            .attr("dy", ".35em")
+            .attr("text-anchor", "middle")
+            .text(function (d) {
+                return d.value;
+            })
+
+        // Update Nodes
+        const nodesUpdate = nodesEnter.merge(node);
+
+        // Transition to the proper position for the node
+        nodesUpdate.transition()
+            .duration(duration)
+            .attr("transform", function (d) {
+                return "translate(" + d.x + "," + d.y + ")";
+            });
+
+        nodesUpdate.select("text")
+            .text(function (d) {
+                return d.value;
+            })
 
 
-    linesEnter = lines.enter()
-        .append('line')
-        .classed('link', true)
-        .attr('x1', function (d) { return d.source.x; })
-        .attr('y1', function (d) { return 0; })
-        .attr('x2', function (d) { return d.target.x; })
-        .attr('y2', function (d) { return d.target.y - d.source.y; });
+        linesEnter = lines.enter()
+            .append('line')
+            .classed('link', true)
+            .attr('x1', function (d) { return d.source.x; })
+            .attr('y1', function (d) { return 0; })
+            .attr('x2', function (d) { return d.target.x; })
+            .attr('y2', function (d) { return d.target.y - d.source.y; });
 
-    linesUpdate = linesEnter.merge(lines);
+        linesUpdate = linesEnter.merge(lines);
 
-    linesUpdate.transition()
-    .duration(duration)
-    .attr('x1', function (d) { return d.source.x; })
-    .attr('y1', function (d) { return d.source.y + radius; })
-    .attr('x2', function (d) { return d.target.x; })
-    .attr('y2', function (d) { return d.target.y - radius; });
+        linesUpdate.transition()
+            .duration(duration)
+            .attr('x1', function (d) { return d.source.x; })
+            .attr('y1', function (d) { return d.source.y + radius; })
+            .attr('x2', function (d) { return d.target.x; })
+            .attr('y2', function (d) { return d.target.y - radius; });
+    }
 }
